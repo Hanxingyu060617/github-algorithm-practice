@@ -1,10 +1,14 @@
-// 作业6：警车双闪灯效
 // 2=黄灯，4=红灯
 const int ledYellow = 2;
 const int ledRed    = 4;
 
 const int freq = 5000;
 const int resolution = 8;
+const int interval = 8; // 渐变间隔
+
+int duty = 0;
+int fadeStep = 1;
+unsigned long previousMillis = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -14,19 +18,29 @@ void setup() {
 }
 
 void loop() {
-  // 黄灯渐亮，红灯渐暗
-  for (int duty = 0; duty <= 255; duty++) {
-    ledcWrite(ledYellow, duty);
-    ledcWrite(ledRed, 255 - duty);
-    delay(8);
-  }
-  Serial.println("黄灯亮，红灯暗");
+  unsigned long currentMillis = millis();
 
-  // 黄灯渐暗，红灯渐亮
-  for (int duty = 255; duty >= 0; duty--) {
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+
+    duty += fadeStep;
+
+    // 到达最亮 → 反转方向
+    if (duty >= 255) {
+      duty = 255;
+      fadeStep = -1;
+      Serial.println("黄灯亮，红灯暗");
+    }
+
+    // 到达最暗 → 反转方向
+    if (duty <= 0) {
+      duty = 0;
+      fadeStep = 1;
+      Serial.println("黄灯暗，红灯亮");
+    }
+
+    // 反相输出
     ledcWrite(ledYellow, duty);
     ledcWrite(ledRed, 255 - duty);
-    delay(8);
   }
-  Serial.println("黄灯暗，红灯亮");
 }
