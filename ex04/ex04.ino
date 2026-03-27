@@ -7,11 +7,12 @@ bool ledState = false;
 bool lastTouched = false;
 bool triggered = false;
 unsigned long lastDebounceTime = 0;
-const unsigned long debounceDelay = 200;  // 防抖时间
+const unsigned long debounceDelay = 200;
 
 void setup() {
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, ledState);  
 }
 
 void loop() {
@@ -21,22 +22,20 @@ void loop() {
 
   bool isTouched = (touchValue < 400);
 
-  // 防抖 + 边沿检测 + 只触发一次
-  if (isTouched && !lastTouched && !triggered && 
-      millis() - lastDebounceTime > debounceDelay) {
-    
-    ledState = !ledState;
-    digitalWrite(LED_PIN, ledState);
-    
-    lastDebounceTime = millis();
-    triggered = true;  // 锁定，按住不再触发
+
+  if (isTouched && !lastTouched && !triggered) {
+    if (millis() - lastDebounceTime > debounceDelay) {
+      ledState = !ledState;
+      digitalWrite(LED_PIN, ledState);
+      lastDebounceTime = millis();
+      triggered = true;
+    }
   }
 
-  // 只有手松开后才解锁，允许下一次触摸
+ 
   if (!isTouched) {
     triggered = false;
   }
 
   lastTouched = isTouched;
-  delay(20);
 }
