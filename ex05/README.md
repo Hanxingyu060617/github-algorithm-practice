@@ -102,3 +102,72 @@ void loop() {
     delay(delayMs[speedGear - 1]);
   }
 }
+
+
+
+
+
+
+### 代码优化点
+1. 采用触摸锁定防抖，替代时间防抖，符合自锁开关逻辑。
+2. 极简串口输出，仅打印档位数字，干净简洁。
+3. 代码结构精简，变量更少，稳定性更高。
+4. 保留中断触摸方式，响应灵敏。
+5. 完全满足实验要求：PWM呼吸 + 触摸档位切换。
+const int ledPin = 2;
+const int touchPin = 4;
+
+const int freq = 5000;
+const int resolution = 8;
+#define THRESHOLD 400
+
+volatile int speedGear = 1;
+volatile bool triggerFlag = false;
+
+// 锁定防抖变量（替代时间防抖）
+volatile bool touchLocked = false;
+
+int delayMs[] = {12, 6, 2}; 
+
+// 触摸中断函数
+void touchISR() {
+  triggerFlag = true;
+}
+
+void setup() {
+  Serial.begin(115200);
+  ledcAttach(ledPin, freq, resolution);
+  touchAttachInterrupt(touchPin, touchISR, THRESHOLD);
+  Serial.println("OK"); // 极简开机输出
+}
+
+void loop() {
+  // ================== 触摸锁定防抖（核心优化）==================
+  if (triggerFlag) {
+    triggerFlag = false;
+
+    // 未锁定才允许切换
+    if (!touchLocked) {
+      speedGear++;
+      if (speedGear > 3) speedGear = 1;
+      
+      Serial.println(speedGear); // 极简串口：只输出档位
+      touchLocked = true; // 触摸锁定，按住不重复触发
+    }
+  }
+
+  // 松开触摸 → 解锁，允许下一次触发
+  if (touchRead(touchPin) > THRESHOLD) {
+    touchLocked = false;
+  }
+
+  // ================== PWM 呼吸灯 ==================
+  for (int duty = 0; duty <= 255; duty++) {
+    ledcWrite(ledPin, duty);
+    delay(delayMs[speedGear - 1]);
+  }
+  for (int duty = 255; duty >= 0; duty--) {
+    ledcWrite(ledPin, duty);
+    delay(delayMs[speedGear - 1]);
+  }
+}
